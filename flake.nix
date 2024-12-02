@@ -12,7 +12,8 @@
       postgresUser ? "postgres",
       postgresPassword ? "postgres",
       postgresDb ? "postgres",
-      postgresVersion ? "15"
+      postgresVersion ? "15",
+      includeNvimDbee ? false,
     }: ''
       if ! docker info > /dev/null 2>&1; then
         echo "🚫 Docker is not running. Please start Docker first."
@@ -49,6 +50,23 @@
           echo "✨ PostgreSQL container is already running"
         fi
       fi
+
+      ${if includeNvimDbee then ''
+      # Read DATABASE_URL from .env if it exists
+      if [ -f .env ]; then
+        DB_URL=$(grep DATABASE_URL .env | cut -d '=' -f2-)
+        if [ ! -z "$DB_URL" ]; then
+          export DBEE_CONNECTIONS="[{\"name\": \"brideboard-local\", \"url\": \"$DB_URL\", \"type\": \"postgres\"}]"
+          echo "📦 Database connection configured from .env file"
+        else
+          echo "⚠️  DATABASE_URL not found in .env file, using default connection"
+          export DBEE_CONNECTIONS='[{"name": "brideboard-local", "url": "postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable", "type": "postgres"}]'
+        fi
+      else
+        echo "⚠️  No .env file found, using default connection"
+        export DBEE_CONNECTIONS='[{"name": "brideboard-local", "url": "postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable", "type": "postgres"}]'
+      fi
+      '' else ""}
     '';
   };
 }
